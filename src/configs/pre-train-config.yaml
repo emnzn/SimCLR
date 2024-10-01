@@ -1,0 +1,9 @@
+epochs: 10
+batch_size: 10
+dataset: cifar10
+hidden_dim: 2048
+temperature: 0.5
+backbone: resnet18
+projection_dim: 128
+eta_min: 1.0e-6
+learning_rate: 0.001
