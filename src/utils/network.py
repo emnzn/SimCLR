@@ -1,6 +1,3 @@
-from typing import Union
-
-import timm
 import torch
 import numpy as np
 import torch.nn as nn
@@ -85,7 +82,7 @@ class SimCLR(L.LightningModule):
     encoder: Encoder
         The initialized ResNet Encoder.
 
-    optimizer: Union[torch.optim.Optimizer, timm.optim.Optimizer]
+    optimizer: torch.optim.Optimizer
         The initialized optimizer.
 
     lr_scheduler: _LRScheduler
@@ -98,7 +95,7 @@ class SimCLR(L.LightningModule):
     def __init__(
         self, 
         encoder: Encoder,
-        optimizer: Union[torch.optim.Optimizer, timm.optim.Optimizer],
+        optimizer: torch.optim.Optimizer,
         lr_scheduler: _LRScheduler,
         temperature: float = 0.5
         ):
