@@ -1,5 +1,6 @@
-data/
-*.ipynb
+*.sh
 *.pyc
 *.pbs
-*.sh
+data/
+*.ipynb
+__pycache__/
