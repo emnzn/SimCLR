@@ -101,7 +101,9 @@ class SimCLR(L.LightningModule):
         ):
         super().__init__()
 
+        self.training_step_losses = []
         self.min_loss = np.inf
+
         self.lr_scheduler = lr_scheduler
         self.optimizer = optimizer
 
@@ -118,8 +120,20 @@ class SimCLR(L.LightningModule):
         z_i, z_j = self(x_i), self(x_j)
         loss = self.criterion(z_i, z_j)
         self.log("loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.training_step_losses.append(loss)
 
         return loss
+    
+    def on_train_epoch_end(self):
+        mean_loss = torch.stack(self.training_step_losses).mean()
+        print(f"Loss: {mean_loss}\n")
+
+        if mean_loss < self.min_loss:
+            print("New minimum loss — model saved.")
+            self.min_loss = mean_loss
+
+        print("-------------------------------------------------------------------\n")
+        self.training_step_losses.clear()
 
     def configure_optimizers(self):
         config = {

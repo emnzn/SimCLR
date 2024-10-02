@@ -36,7 +36,7 @@ def main():
     lr = 0.3 * (args["batch_size"] / 256)
     
     pretrain_dataset = get_pretraining_dataset(data_dir, args["dataset"])
-    pretrain_loader = DataLoader(pretrain_dataset, batch_size=args["batch_size"], shuffle=True, num_workers=9, persistent_workers=True)
+    pretrain_loader = DataLoader(pretrain_dataset, batch_size=args["batch_size"], shuffle=True, num_workers=os.cpu_count(), persistent_workers=True)
     
     encoder = Encoder(args["backbone"], args["hidden_dim"], args["projection_dim"])
     optimizer = Lars(encoder.parameters(), lr=lr, weight_decay=args["weight_decay"])
