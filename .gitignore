@@ -2,5 +2,6 @@
 *.pyc
 *.pbs
 data/
+*.ckpt
 *.ipynb
 __pycache__/
