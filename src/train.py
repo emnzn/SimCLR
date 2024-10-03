@@ -3,6 +3,7 @@ import os
 import torch
 import lightning as L
 from timm.optim import Lars
+from lightning import seed_everything
 from torch.utils.data import DataLoader
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -15,6 +16,8 @@ from utils import (
 )
 
 def main():
+    seed_everything(42, workers=True)
+
     data_dir = os.path.join("..", "data")
     arg_dir = os.path.join("configs", "pre-train-config.yaml")
     args = get_args(arg_dir)
@@ -46,8 +49,10 @@ def main():
 
     trainer = L.Trainer(
         logger=logger,
-        devices='auto',
-        accelerator='auto', 
+        devices=-1,
+        strategy="ddp",
+        accelerator="auto", 
+        deterministic=True,
         max_epochs=args["epochs"], 
         callbacks=[checkpoint_callback]
     )

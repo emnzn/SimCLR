@@ -1,6 +1,6 @@
 graphviz==0.20.3
 lightning==2.4.0
-numpy==2.1.1
+numpy==1.26.4
 Pillow==10.4.0
 PyYAML==6.0.1
 timm==1.0.9
