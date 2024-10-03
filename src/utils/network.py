@@ -126,13 +126,13 @@ class SimCLR(L.LightningModule):
     
     def on_train_epoch_end(self):
         mean_loss = torch.stack(self.training_step_losses).mean()
-        print(f"Loss: {mean_loss}\n")
+        print(f"\nLoss: {mean_loss}")
 
         if mean_loss < self.min_loss:
-            print("New minimum loss — model saved.")
+            print("\nNew minimum loss — model saved.")
             self.min_loss = mean_loss
 
-        print("-------------------------------------------------------------------\n")
+        print("\n--------------------------------\n")
         self.training_step_losses.clear()
 
     def configure_optimizers(self):

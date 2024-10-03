@@ -7,3 +7,4 @@ backbone: resnet50
 projection_dim: 128
 eta_min: 0.0
 weight_decay: 1.0e-6
+lr_scaling_method: square-root
