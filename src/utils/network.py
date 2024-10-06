@@ -162,11 +162,14 @@ class ResNetClassifier(L.LightningModule):
     freeze_encoder: bool
         Whether to freeze the encoder for linear evaluation of the representations.
 
-    optimizer: torch.optim.Optimizer
-        The initialized optimizer.
+    learning_rate: float
+        The learning rate of the optimizer.
 
-    lr_scheduler: _LRScheduler
-        The initialized learning rate scheduler.
+    weight_decay: float
+        The L2 regularization strength.
+
+    eta_min: float
+        The minimum value the learning rate decays to using CosineAnnealing.
     """
 
     def __init__(
