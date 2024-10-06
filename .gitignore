@@ -4,4 +4,7 @@
 data/
 *.ckpt
 *.ipynb
+.DS_Store
+.gitattributes
+hparams.yaml
 __pycache__/
