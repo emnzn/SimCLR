@@ -50,7 +50,7 @@ class Augment:
 def get_pretraining_dataset(
     data_dir: str, 
     dataset: str, 
-    distortion_strength: float = 1.0
+    distortion_strength: float = 0.5
     ) -> Union[CIFAR10, CIFAR100]:
 
     """
@@ -73,26 +73,81 @@ def get_pretraining_dataset(
         The pre-training dataset for contrastive learning.
     """
 
+    def get_transforms(mean, std):    
+        transform = transforms.Compose([
+            transforms.RandomResizedCrop(size=(32, 32)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            *get_color_distortion(distortion_strength),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+
+        return transform
+
     if dataset == "cifar10":
         mean = (0.4914, 0.4822, 0.4465)
         std = (0.2023, 0.1994, 0.2010)
+        transform = get_transforms(mean, std)
+
+        pretrain_dataset = CIFAR10(data_dir, train=True, transform=Augment(transform), download=True)
     
     if dataset == "cifar100":
         mean = (0.5071, 0.4867, 0.4408)
         std = (0.2675, 0.2565, 0.2761)
+        transform = get_transforms(mean, std)
 
-    transform = transforms.Compose([
-        transforms.RandomResizedCrop(size=(224, 224)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        *get_color_distortion(distortion_strength),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ])
-
-    if dataset == "cifar10":
-        pretrain_dataset = CIFAR10(data_dir, train=True, transform=Augment(transform), download=True)
-
-    if dataset == "cifar100":
         pretrain_dataset = CIFAR100(data_dir, train=True, transform=Augment(transform), download=True)
 
     return pretrain_dataset
+
+
+def get_finetune_dataset(
+    data_dir: str, 
+    dataset: str
+    ) -> Union[CIFAR10, CIFAR100]:
+
+    """
+    Constructs the finetuning dataset.
+    
+    Parameters
+    ----------
+    data_dir: str
+        The directory to save the images.
+
+    dataset: str
+        Must be one of [`cifar10`, `cifar100`].
+
+    Returns
+    -------
+    train_dataset: Union[CIFAR10, CIFAR100]
+        The train set for finetuning.
+
+    val_dataset: Union[CIFAR10, CIFAR100]
+        The validation set for finetuning.
+    """
+
+    def get_transforms(mean, std):
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+
+        return transform
+    
+    if dataset == "cifar10":
+        mean = (0.4914, 0.4822, 0.4465)
+        std = (0.2023, 0.1994, 0.2010)
+        transform = get_transforms(mean, std)
+
+        train_dataset = CIFAR10(data_dir, train=True, transform=transform, download=True)
+        val_dataset = CIFAR10(data_dir, train=False, transform=transform, download=True)
+    
+    if dataset == "cifar100":
+        mean = (0.5071, 0.4867, 0.4408)
+        std = (0.2675, 0.2565, 0.2761)
+        transform = get_transforms(mean, std)
+
+        train_dataset = CIFAR100(data_dir, train=True, transform=transform, download=True)
+        val_dataset = CIFAR100(data_dir, train=False, transform=transform, download=True)
+
+    return train_dataset, val_dataset

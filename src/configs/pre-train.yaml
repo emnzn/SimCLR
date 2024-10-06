@@ -1,10 +1,12 @@
+seed: 42
 epochs: 200
+version: 0
+eta_min: 0.0
 batch_size: 256
 dataset: cifar10
 hidden_dim: 2048
 temperature: 0.5
 backbone: resnet50
 projection_dim: 128
-eta_min: 0.0
 weight_decay: 1.0e-6
 lr_scaling_method: square-root

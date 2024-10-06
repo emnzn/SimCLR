@@ -2,9 +2,10 @@ import torch
 import numpy as np
 import torch.nn as nn
 import lightning as L
-import torch.nn.functional as F
+from sklearn.metrics import accuracy_score
 from torchvision.models.resnet import ResNet
 from torch.optim.lr_scheduler import _LRScheduler
+from lightning.pytorch.utilities import rank_zero
 from torchvision.models import (
     resnet18, 
     resnet34,
@@ -69,7 +70,7 @@ class Encoder(nn.Module):
         z = self.g(h)
 
         return z
-
+    
 
 class SimCLR(L.LightningModule):
 
@@ -100,9 +101,7 @@ class SimCLR(L.LightningModule):
         temperature: float = 0.5
         ):
         super().__init__()
-
-        self.training_step_losses = []
-        self.min_loss = np.inf
+        self.save_hyperparameters(ignore=["encoder"])
 
         self.lr_scheduler = lr_scheduler
         self.optimizer = optimizer
@@ -119,27 +118,186 @@ class SimCLR(L.LightningModule):
         (x_i, x_j), _ = batch
         z_i, z_j = self(x_i), self(x_j)
         loss = self.criterion(z_i, z_j)
-        self.log("loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.training_step_losses.append(loss)
+        self.log("Loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+
+        optimizer = self.trainer.optimizers[0]
+        lr = optimizer.param_groups[0]["lr"]
+        self.log("Learning Rate", lr, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss
-    
-    def on_train_epoch_end(self):
-        mean_loss = torch.stack(self.training_step_losses).mean()
-        print(f"\nLoss: {mean_loss}")
-
-        if mean_loss < self.min_loss:
-            print("\nNew minimum loss — model saved.")
-            self.min_loss = mean_loss
-
-        print("\n--------------------------------\n")
-        self.training_step_losses.clear()
 
     def configure_optimizers(self):
         config = {
             "optimizer": self.optimizer,
             "lr_scheduler": {
                 "scheduler": self.lr_scheduler,
+                "interval": "epoch",
+                "frequency": 1
+            }
+        }
+
+        return config
+    
+
+class ResNetClassifier(L.LightningModule):
+
+    """
+    A constructor that takes in a pre-trained encoder, 
+    and attaches a linear classification head for finetuning.
+
+    This constructor assumes that the 2-layer non-linear 
+    projection head has been removed.
+
+    Parameters
+    ----------
+    encoder: Encoder
+        The initialized ResNet Encoder with pre-trained weights.
+
+    num_classes: int
+        The number of output classes.
+
+    embedding_dim: int
+        The dimension of the image embedding produced by the encoder.
+
+    freeze_encoder: bool
+        Whether to freeze the encoder for linear evaluation of the representations.
+
+    optimizer: torch.optim.Optimizer
+        The initialized optimizer.
+
+    lr_scheduler: _LRScheduler
+        The initialized learning rate scheduler.
+    """
+
+    def __init__(
+        self, 
+        encoder: Encoder,
+        num_classes: int,
+        embedding_dim: int, 
+        freeze_encoder: bool,
+        learning_rate: float,
+        weight_decay: float,
+        eta_min: float
+        ):
+        super().__init__()
+
+        self.train_running_metric = {
+            "accumulated_loss": 0,
+            "accumulated_accuracy": 0,
+            "num_steps": 0
+        }
+
+        self.val_running_metric = {
+            "accumulated_loss": 0,
+            "accumulated_accuracy": 0,
+            "num_steps": 0
+        }
+
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.eta_min = eta_min
+
+        self.min_val_loss = np.inf
+        self.max_val_accuracy = -np.inf
+        self.criterion = nn.CrossEntropyLoss()
+
+        self.encoder = encoder
+        if freeze_encoder:
+            self.encoder.requires_grad_(False)
+            self.encoder.eval()
+
+        self.fc = nn.Linear(embedding_dim, num_classes)
+
+    def forward(
+        self, 
+        x: torch.Tensor
+        ) -> torch.Tensor:
+
+        h = self.encoder(x)
+        h = torch.flatten(h, 1)
+        logits = self.fc(h)
+
+        return logits
+    
+    def _pred_and_eval(self, batch):
+        img, target = batch
+        logits = self(img)
+        confidence = nn.functional.softmax(logits, dim=1)
+        pred = torch.argmax(confidence, dim=1)
+
+        loss = self.criterion(logits, target)
+        accuracy = accuracy_score(target.cpu(), pred.cpu())
+
+        return loss, accuracy
+    
+    def training_step(self, batch, _):
+        train_loss, train_accuracy = self._pred_and_eval(batch)
+
+        self.train_running_metric["accumulated_loss"] += train_loss.detach().item()
+        self.train_running_metric["accumulated_accuracy"] += train_accuracy
+        self.train_running_metric["num_steps"] += 1
+
+        optimizer = self.trainer.optimizers[0]
+        lr = optimizer.param_groups[0]["lr"]
+        self.log("Learning Rate", lr, on_step=False, on_epoch=True, prog_bar=True)
+
+        metrics = {
+            "loss": train_loss,
+            "accuracy": train_accuracy
+        }
+
+        return metrics
+    
+    def validation_step(self, batch, _):
+        val_loss, val_accuracy = self._pred_and_eval(batch)
+
+        self.val_running_metric["accumulated_loss"] += val_loss.item()
+        self.val_running_metric["accumulated_accuracy"] += val_accuracy
+        self.val_running_metric["num_steps"] += 1
+
+        metrics = {
+            "loss": val_loss,
+            "accuracy": val_accuracy
+        }
+
+        return metrics
+    
+    def on_train_epoch_end(self):
+        mean_train_loss = self.train_running_metric["accumulated_loss"] / self.train_running_metric["num_steps"]
+        mean_train_accuracy = self.train_running_metric["accumulated_accuracy"] / self.train_running_metric["num_steps"]
+
+        self.log("Train/Loss", mean_train_loss, on_epoch=True, prog_bar=False)
+        self.log("Train/Accuracy", mean_train_accuracy, on_epoch=True, prog_bar=False)
+
+        mean_val_loss = self.val_running_metric["accumulated_loss"] / self.val_running_metric["num_steps"]
+        mean_val_accuracy = self.val_running_metric["accumulated_accuracy"] / self.val_running_metric["num_steps"]
+
+        self.log("Validation/Loss", mean_val_loss, on_epoch=True, prog_bar=False)
+        self.log("Validation/Accuracy", mean_val_accuracy, on_epoch=True, prog_bar=False)
+
+        print("\nValidation Statistics:")
+        print(f"Loss: {mean_val_loss:.4f} | Accuracy: {mean_val_accuracy:.4f}\n")
+
+        if mean_val_loss < self.min_val_loss:
+            print("New minimum loss — model saved.")
+            self.min_val_loss = mean_val_loss
+
+        if mean_val_accuracy > self.max_val_accuracy:
+            print("New maximum accuracy — model saved.")
+            self.max_val_accuracy = mean_val_accuracy
+
+        print("\n-------------------------------------------------------------------\n")
+        
+        self.val_running_metric = {k: 0 for k in self.val_running_metric.keys()}
+        self.train_running_metric = {k: 0 for k in self.train_running_metric.keys()}
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.fc.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.trainer.max_epochs, eta_min=self.eta_min)
+        config = {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": lr_scheduler,
                 "interval": "epoch",
                 "frequency": 1
             }
@@ -176,6 +334,8 @@ def get_model(model: str) -> ResNet:
     }
 
     model = model_table[model]
+    model.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=3, bias=False)
+    model.maxpool = nn.Identity()
     encoder = list(model.children())[:-1]
     h_dim = list(model.children())[-1].in_features
 

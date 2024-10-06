@@ -1,2 +1,11 @@
-backbone: resnet18
+seed: 42
+epochs: 100
+eta_min: 1.0e-6
+batch_size: 8
+dataset: cifar10
+backbone: resnet50
+freeze_encoder: True
 experiment_version: 0
+learning_rate: 1.0e-4
+weight_decay: 0.0
+random_weight_init: False

@@ -1,10 +1,11 @@
-backbone: resnet18
-batch_size: 10
+backbone: resnet50
+batch_size: 256
 dataset: cifar10
 epochs: 200
 eta_min: 0.0
 hidden_dim: 2048
 lr_scaling_method: square-root
 projection_dim: 128
+seed: 42
 temperature: 0.5
 weight_decay: 1.0e-06
