@@ -184,18 +184,6 @@ class ResNetClassifier(L.LightningModule):
         ):
         super().__init__()
 
-        self.train_running_metric = {
-            "accumulated_loss": 0,
-            "accumulated_accuracy": 0,
-            "num_steps": 0
-        }
-
-        self.val_running_metric = {
-            "accumulated_loss": 0,
-            "accumulated_accuracy": 0,
-            "num_steps": 0
-        }
-
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.eta_min = eta_min
@@ -235,13 +223,11 @@ class ResNetClassifier(L.LightningModule):
     
     def training_step(self, batch, _):
         train_loss, train_accuracy = self._pred_and_eval(batch)
-
-        self.train_running_metric["accumulated_loss"] += train_loss.detach().item()
-        self.train_running_metric["accumulated_accuracy"] += train_accuracy
-        self.train_running_metric["num_steps"] += 1
-
         optimizer = self.trainer.optimizers[0]
         lr = optimizer.param_groups[0]["lr"]
+
+        self.log("Train/Loss", train_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("Train/Accuracy", train_accuracy, on_step=False, on_epoch=True, prog_bar=True)
         self.log("Learning Rate", lr, on_step=False, on_epoch=True, prog_bar=True)
 
         metrics = {
@@ -254,9 +240,8 @@ class ResNetClassifier(L.LightningModule):
     def validation_step(self, batch, _):
         val_loss, val_accuracy = self._pred_and_eval(batch)
 
-        self.val_running_metric["accumulated_loss"] += val_loss.item()
-        self.val_running_metric["accumulated_accuracy"] += val_accuracy
-        self.val_running_metric["num_steps"] += 1
+        self.log("Validation/Loss", val_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("Validation/Accuracy", val_accuracy, on_step=False, on_epoch=True, prog_bar=True)
 
         metrics = {
             "loss": val_loss,
@@ -264,35 +249,6 @@ class ResNetClassifier(L.LightningModule):
         }
 
         return metrics
-    
-    def on_train_epoch_end(self):
-        mean_train_loss = self.train_running_metric["accumulated_loss"] / self.train_running_metric["num_steps"]
-        mean_train_accuracy = self.train_running_metric["accumulated_accuracy"] / self.train_running_metric["num_steps"]
-
-        self.log("Train/Loss", mean_train_loss, on_epoch=True, prog_bar=False)
-        self.log("Train/Accuracy", mean_train_accuracy, on_epoch=True, prog_bar=False)
-
-        mean_val_loss = self.val_running_metric["accumulated_loss"] / self.val_running_metric["num_steps"]
-        mean_val_accuracy = self.val_running_metric["accumulated_accuracy"] / self.val_running_metric["num_steps"]
-
-        self.log("Validation/Loss", mean_val_loss, on_epoch=True, prog_bar=False)
-        self.log("Validation/Accuracy", mean_val_accuracy, on_epoch=True, prog_bar=False)
-
-        print("\nValidation Statistics:")
-        print(f"Loss: {mean_val_loss:.4f} | Accuracy: {mean_val_accuracy:.4f}\n")
-
-        if mean_val_loss < self.min_val_loss:
-            print("New minimum loss — model saved.")
-            self.min_val_loss = mean_val_loss
-
-        if mean_val_accuracy > self.max_val_accuracy:
-            print("New maximum accuracy — model saved.")
-            self.max_val_accuracy = mean_val_accuracy
-
-        print("\n-------------------------------------------------------------------\n")
-        
-        self.val_running_metric = {k: 0 for k in self.val_running_metric.keys()}
-        self.train_running_metric = {k: 0 for k in self.train_running_metric.keys()}
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.fc.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
