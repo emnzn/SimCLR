@@ -1,0 +1,11 @@
+backbone: resnet50
+batch_size: 8
+dataset: cifar10
+epochs: 100
+eta_min: 1.0e-06
+experiment_version: 1
+freeze_encoder: true
+learning_rate: 0.0001
+random_weight_init: false
+seed: 42
+weight_decay: 0.0

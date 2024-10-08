@@ -1,6 +1,6 @@
 import os
 import yaml
-from typing import Dict, Union
+from typing import Dict, Union, Any
 
 def get_args(args_path: str) -> Dict[str, Union[float, str]]:
     """
@@ -34,6 +34,16 @@ def get_encoder_args(run_dir: str) -> Dict[str, Union[float, str]]:
     encoder_args = {k: v for k, v in args.items() if k in encoder_args}
     
     return encoder_args
+
+
+def get_pretrain_lr(args: Dict[str, Any]):
+    if args["lr_scaling_method"] == "square-root":
+        lr = 0.075 * (args["batch_size"] ** 0.5)
+
+    elif args["lr_scaling_method"] == "linear":
+        lr = 0.3 * (args["batch_size"] / 256)
+
+    return lr
 
 
 def save_args(

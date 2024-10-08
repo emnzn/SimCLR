@@ -26,11 +26,11 @@ def main():
     seed_everything(args["seed"], workers=True)
 
     logger = TensorBoardLogger("finetune-runs", name=args["backbone"], version=args["experiment_version"])
-    log_dir = os.path.join("finetune-runs", args["backbone"], f"version_{args["experiment_version"]}")
+    log_dir = os.path.join("finetune-runs", args["backbone"], f"version_{args['experiment_version']}")
     os.makedirs(log_dir, exist_ok=True)
     save_args(args, log_dir)
 
-    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "finetune", f"version_{args["experiment_version"]}")
+    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "finetune", f"version_{args['experiment_version']}")
     os.makedirs(save_dir, exist_ok=True)
 
     pbar = TQDMProgressBar(leave=True)

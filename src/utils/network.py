@@ -2,10 +2,9 @@ import torch
 import numpy as np
 import torch.nn as nn
 import lightning as L
+from timm.optim import Lars
 from sklearn.metrics import accuracy_score
 from torchvision.models.resnet import ResNet
-from torch.optim.lr_scheduler import _LRScheduler
-from lightning.pytorch.utilities import rank_zero
 from torchvision.models import (
     resnet18, 
     resnet34,
@@ -83,11 +82,14 @@ class SimCLR(L.LightningModule):
     encoder: Encoder
         The initialized ResNet Encoder.
 
-    optimizer: torch.optim.Optimizer
-        The initialized optimizer.
+    learning_rate: float
+        The learning rate of the optimizer.
 
-    lr_scheduler: _LRScheduler
-        The initialized learning rate scheduler.
+    weight_decay: float
+        The L2 regularization strength.
+
+    eta_min: float
+        The minimum value the learning rate decays to using CosineAnnealing.
 
     temperature: float
         The temperature parameter in NTXent.
@@ -96,15 +98,16 @@ class SimCLR(L.LightningModule):
     def __init__(
         self, 
         encoder: Encoder,
-        optimizer: torch.optim.Optimizer,
-        lr_scheduler: _LRScheduler,
+        learning_rate: float,
+        weight_decay: float,
+        eta_min: float,
         temperature: float = 0.5
         ):
         super().__init__()
-        self.save_hyperparameters(ignore=["encoder"])
 
-        self.lr_scheduler = lr_scheduler
-        self.optimizer = optimizer
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.eta_min = eta_min
 
         self.encoder = encoder
         self.criterion = NTXent(temperature)
@@ -117,6 +120,13 @@ class SimCLR(L.LightningModule):
     def training_step(self, batch, _):
         (x_i, x_j), _ = batch
         z_i, z_j = self(x_i), self(x_j)
+
+        z_i = self.all_gather(z_i, sync_grads=True)
+        z_j = self.all_gather(z_j, sync_grads=True)
+
+        z_i = z_i.contiguous().reshape(-1, z_i.shape[-1])
+        z_j = z_j.contiguous().reshape(-1, z_j.shape[-1])
+
         loss = self.criterion(z_i, z_j)
         self.log("Loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -127,10 +137,13 @@ class SimCLR(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
+        optimizer = Lars(self.encoder.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.trainer.max_epochs, eta_min=self.eta_min)
+
         config = {
-            "optimizer": self.optimizer,
+            "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": self.lr_scheduler,
+                "scheduler": lr_scheduler,
                 "interval": "epoch",
                 "frequency": 1
             }
@@ -253,6 +266,7 @@ class ResNetClassifier(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.fc.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.trainer.max_epochs, eta_min=self.eta_min)
+
         config = {
             "optimizer": optimizer,
             "lr_scheduler": {

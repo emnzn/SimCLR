@@ -1,8 +1,8 @@
 seed: 42
 epochs: 200
-version: 0
+version: 1
 eta_min: 0.0
-batch_size: 256
+batch_size: 512
 dataset: cifar10
 hidden_dim: 2048
 temperature: 0.5
