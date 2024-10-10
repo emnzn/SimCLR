@@ -75,7 +75,7 @@ To pre-train and finetune the model, run the following under the `src/` director
 
 ```bash
 # Contrastive pre-training
-python pre-train.py
+python train.py
 
 # Finetuning
 python finetune.py
