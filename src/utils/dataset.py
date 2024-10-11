@@ -125,6 +125,9 @@ def get_finetune_dataset(
     val_dataset: Union[CIFAR10, CIFAR100]
         The validation set for finetuning.
     """
+    
+    valid_datasets = ["cifar10", "cifar100"]
+    assert dataset in valid_datasets, f"Dataset must be one of {valid_datasets}"
 
     def get_transforms(mean, std):
         transform = transforms.Compose([

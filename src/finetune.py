@@ -15,22 +15,25 @@ from utils import (
     ResNetClassifier,
     get_args,
     save_args,
+    get_train_type,
     get_encoder_args,
     get_finetune_dataset
 )
 
 def main():
+    num_gpus = torch.cuda.device_count()
     data_dir = os.path.join("..", "data")
     arg_dir = os.path.join("configs", "finetune.yaml")
     args = get_args(arg_dir)
     seed_everything(args["seed"], workers=True)
 
-    logger = TensorBoardLogger("finetune-runs", name=args["backbone"], version=args["experiment_version"])
-    log_dir = os.path.join("finetune-runs", args["backbone"], f"version_{args['experiment_version']}")
+    train_type = get_train_type(args)
+    logger = TensorBoardLogger("finetune-runs", name=args["backbone"], version=args["experiment_version"], sub_dir=train_type)
+    log_dir = os.path.join("finetune-runs", args["backbone"], f"version_{args['experiment_version']}", train_type)
     os.makedirs(log_dir, exist_ok=True)
     save_args(args, log_dir)
 
-    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "finetune", f"version_{args['experiment_version']}")
+    save_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "finetune", f"version_{args['experiment_version']}", train_type)
     os.makedirs(save_dir, exist_ok=True)
 
     pbar = TQDMProgressBar(leave=True)
@@ -61,12 +64,12 @@ def main():
     embedding_dim = encoder.g[0].in_features
     encoder = encoder.f
 
-    strategy = "ddp" if torch.cuda.device_count() > 1 else "auto"
+    strategy = "ddp" if num_gpus > 1 else "auto"
     precision = "16-mixed" if torch.cuda.is_available() else "32"
 
     classifier = ResNetClassifier(
         encoder=encoder, 
-        num_classes=10, 
+        num_classes=args["num_classes"], 
         embedding_dim=embedding_dim, 
         freeze_encoder=args["freeze_encoder"], 
         learning_rate=args["learning_rate"], 

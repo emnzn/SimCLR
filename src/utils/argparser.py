@@ -46,6 +46,19 @@ def get_pretrain_lr(args: Dict[str, Any]):
     return lr
 
 
+def get_train_type(args: Dict[str, Any]):
+    if args["freeze_encoder"] == False:
+        train_type = "from-scratch"
+    
+    elif args["random_weight_init"]:
+        train_type = "random-classifier-init"
+
+    else:
+        train_type = "pre-trained"
+
+    return train_type
+
+
 def save_args(
     args: Dict[str, Union[float, str]], 
     dest_dir: str

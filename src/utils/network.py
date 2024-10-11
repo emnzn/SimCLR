@@ -264,7 +264,8 @@ class ResNetClassifier(L.LightningModule):
         return metrics
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.fc.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        params = list(self.encoder.parameters()) + list(self.fc.parameters())
+        optimizer = torch.optim.AdamW(params, lr=self.learning_rate, weight_decay=self.weight_decay)
         lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.trainer.max_epochs, eta_min=self.eta_min)
 
         config = {
