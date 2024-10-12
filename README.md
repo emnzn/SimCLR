@@ -16,9 +16,11 @@ It supports pre-training on **CIFAR-10** and **CIFAR-100**, followed by fine-tun
 ## Evaluation Strategy
 To assess the quality of the pre-trained embeddings, the encoder is frozen and a classification head is fine-tuned on downstream tasks. 
 
-Results are compared against a model trained from scratch.
+Results are compared against a baseline model trained from scratch.
 
-**Note**: For simplicity, the CIFAR-10 and CIFAR-100 test sets are used during validation.
+_If the frozen pre-trained embeddings, with only a fine-tuned classification head, perform well on an unseen evaluation set, it indicates that **the pre-training objective successfully guided the model to learn robust and transferable embeddings**_
+
+**Note**: For simplicity in validating my implementation, the CIFAR-10 test set was used during validation.
 
 ## CIFAR-10 Test Results (ResNet-50 Backbone)
 | Implementation | Loss   | Accuracy   |
@@ -84,3 +86,25 @@ python train.py
 # Finetuning
 python finetune.py
 ```
+
+## Embedding Visualization
+
+**Trained from scratch using Cross Entropy**
+<p align="center">
+    <img src="assets/embedding-visualization/resnet50/finetune/version_1/from-scratch-embedding.png" alt="Cross Entropy Embeddings" style="border-radius: 8px; width: 95%;">
+</p>
+
+**Pre-trained with SimCLR**
+<p align="center">
+    <img src="assets/embedding-visualization/resnet50/finetune/version_1/pre-trained-embedding.png" alt="NT-Xent Embeddings" style="border-radius: 8px; width: 95%;">
+</p>
+
+
+## Graphs
+
+### Train 
+![Train Curve](assets/images/Train-Log.png)
+
+### Validation
+
+![Validation Curve](assets/images/Val-Log.png)
