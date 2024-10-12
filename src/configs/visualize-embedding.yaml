@@ -1,0 +1,7 @@
+seed: 42
+num_classes: 10
+dataset: cifar10
+backbone: resnet50
+freeze_encoder: True
+batch_size: 8
+experiment_version: 1

@@ -48,8 +48,21 @@ def main():
     )
 
     train_dataset, val_dataset = get_finetune_dataset(data_dir, dataset=args["dataset"])
-    train_loader = DataLoader(train_dataset, batch_size=args["batch_size"], shuffle=True, num_workers=os.cpu_count(), persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=args["batch_size"], shuffle=False, num_workers=os.cpu_count(), persistent_workers=True)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=args["batch_size"], 
+        shuffle=True, 
+        num_workers=os.cpu_count() // 4, 
+        persistent_workers=True
+    )
+    
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=args["batch_size"], 
+        shuffle=False, 
+        num_workers=os.cpu_count() // 4, 
+        persistent_workers=True
+    )
 
     run_dir = os.path.join("pre-train-runs", args["backbone"], f"version_{args['experiment_version']}", "run-config.yaml")
     ckpt_dir = os.path.join("..", "assets", "model-weights", args["backbone"], "pre-train", f"version_{args['experiment_version']}", "min-loss.ckpt")

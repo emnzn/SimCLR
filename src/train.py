@@ -52,9 +52,9 @@ def main():
         pretrain_dataset, 
         shuffle=True,
         persistent_workers=True,
-        num_workers=os.cpu_count(), 
+        num_workers=os.cpu_count() // 4, 
         batch_size=process_batch_size, 
-        )
+    )
     
     encoder = Encoder(args["backbone"], args["hidden_dim"], args["projection_dim"])
     strategy = "ddp" if num_gpus > 1 else "auto"
