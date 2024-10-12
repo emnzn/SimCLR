@@ -34,7 +34,7 @@ pip install -r requirements.txt
 ```
 
 ## Pre-train Configuration
-Configure  pre-training through `pre-train.yaml` found under the `config` directory. An example configuration is shown below:
+Configure pre-training through `pre-train.yaml` found under the `config` directory. The configuration used in my experiments is shown below:
 
 
 ``` yaml
@@ -56,7 +56,7 @@ projection_dim: 128
 ```
 
 ## Finetune Configuration
-Alternatively, configure the finetuning script through `finetune.yaml` which is also found under the `config` directory. An example configuration is shown below:
+Alternatively, configure the finetuning script through `finetune.yaml` which is also found under the `config` directory. The configuration used in my experiments is shown below:
 
 ``` yaml
 # Training
