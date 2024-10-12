@@ -20,7 +20,11 @@ Results are compared against a model trained from scratch.
 
 **Note**: For simplicity, the CIFAR-10 and CIFAR-100 test sets are used during validation.
 
-## CIFAR Test Results
+## CIFAR-10 Test Results (ResNet-50 Backbone)
+| Implementation | Loss   | Accuracy   |
+|----------------|--------|------------|
+| SimCLR         | 0.558  | **79.83%** |
+| From Scratch   | 1.070  | **87.15%** |
 
 ## Installation 
 ```bash
