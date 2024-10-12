@@ -18,7 +18,7 @@ To assess the quality of the pre-trained embeddings, the encoder is frozen and a
 
 Results are compared against a baseline model trained from scratch.
 
-_If the frozen pre-trained embeddings, with only a fine-tuned classification head, perform well on an unseen evaluation set, it indicates that **the pre-training objective successfully guided the model to learn robust and transferable embeddings**_
+If the frozen pre-trained embeddings, with only a fine-tuned classification head, perform well on an unseen evaluation set, it indicates that **the pre-training objective successfully guided the model to learn robust and transferable embeddings.**
 
 **Note**: For simplicity in validating my implementation, the CIFAR-10 test set was used during validation.
 
