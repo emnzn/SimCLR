@@ -8,3 +8,4 @@ data/
 .gitattributes
 hparams.yaml
 __pycache__/
+*/demo-finetune-runs/
