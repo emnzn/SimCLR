@@ -3,13 +3,13 @@ seed: 42
 epochs: 100
 eta_min: 1.0e-6
 batch_size: 8
+dataset: cifar10
 weight_decay: 0.0
 learning_rate: 1.0e-4
 experiment_version: 1
 
 # Model
 num_classes: 10
-dataset: cifar10
 backbone: resnet50
-freeze_encoder: False
+freeze_encoder: True
 random_weight_init: False
